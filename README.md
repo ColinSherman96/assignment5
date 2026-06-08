@@ -1,5 +1,7 @@
 # 📦 Project Setup
 
+# For project 3 - added this line for the sake of testing commits!
+
 ---
 
 # 🧩 1. Install Homebrew (Mac Only)
