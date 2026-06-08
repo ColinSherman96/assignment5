@@ -1,6 +1,6 @@
 # 📦 Project Setup
 
-# For project 3 - added this line for the sake of testing commits!
+> For project 3 - added this line for the sake of testing commits!
 
 ---
 
