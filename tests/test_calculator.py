@@ -72,4 +72,4 @@ def test_division_by_zero(monkeypatch):
     """Test division by zero in REPL."""
     inputs = ["divide 5 0", "exit"]
     output = run_calculator_with_input(monkeypatch, inputs)
-    assert "Division by zero is not allowed" in output
+    assert "Cannot divide by zero" in output
