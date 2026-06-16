@@ -1,76 +1,161 @@
-""" 
-This file is the "app/calculator.py" file. It contains a simple calculator that can add, subtract, multiply, 
-and divide numbers based on what the user types.
+"""
+This is my attempt at Assignment #4. While I am using the provided code as a template for learning purposes, I am attempting to add and create my own code to demonstrate my understanding of the concepts.
+
 """
 
-# First, we need to get some functions that can actually do the math for us. These functions (addition, 
-# subtraction, multiplication, and division) are in another file called "operations.py" in the "app" folder.
-# This is like opening a toolbox and pulling out the tools we need to do our math.
-from app.operations import operations
+import sys
+import readline  # Enables command history and editing features
+from typing import List
+from app.calculation import CalculationFactory, Operation
 
-# Now we're going to create the main function called "calculator". 
-# A function is just a block of code that does something when you call it, kind of like a recipe that tells the 
-# computer what to do.
-def calculator():
-    """Basic REPL calculator that performs addition, subtraction, multiplication, and division."""
-    
-    # First, we print a message to welcome the user to the calculator.
-    print("Welcome to the calculator REPL! Type 'exit' to quit")
-    
-    # This is the part where the calculator keeps running. The 'while True' means we are going to keep 
-    # doing something (in this case, asking the user for input) until we tell it to stop.
+def display_help() -> None:
+    """
+    This is how we provide instructions to the user on how to use the calculator. When the user types "help",
+    """
+    help_message = """
+Calculator REPL Help
+--------------------
+Usage:
+    <operation> <number1> <number2>
+    - Perform a calculation with the specified operation and two numbers.
+    - Supported operations:
+        add       : This adds two numbers together
+        subtract  : This subtracts the second number from the first.
+        multiply  : This multiplies two numbers.
+        divide    : This divides the first number by the second.
+
+Special Commands:
+    help      : Display this help message.
+    history   : Show the history of calculations.
+    exit      : Exit the calculator.
+
+Examples:
+    add 10 5
+    subtract 15.5 3.2
+    multiply 7 8
+    divide 20 4
+    """
+    print(help_message)
+
+
+def display_history(history: List[Operation]) -> None:
+    """
+    This displays the history of calculations performed during the session.
+
+    Parameters:
+        history (List[Operation]): A list of Operation objects representing past calculations done in the current session.
+    """
+    if not history:
+        print("No calculations performed yet.")
+    else:
+        print("Calculation History:")
+        for idx, calculation in enumerate(history, start=1):
+            print(f"{idx}. {calculation}")
+
+
+def calculator() -> None:
+    """
+    Attempt at a REPL calculator that performs addition, subtraction,
+    multiplication, and division using Calculation classes.
+
+    This function demonstrates both LBYL and EAFP programming paradigms.
+    """
+    # Initialize an empty list to keep track of calculation history
+    history: List[Operation] = []
+
+    # Welcome message to the user
+    print("Welcome to the Professional Calculator REPL!")
+    print("Type 'help' for instructions or 'exit' to quit.\n")
+
+    # Continuously prompt the user for input until they decide to exit
     while True:
-        # Now we ask the user to type something, like "add 5 3". 
-        # This will get the operation (like "add") and two numbers from the user.
-        user_input = input("Enter an operation (add, subtract, multiply, divide) and two numbers, or 'exit' to quit: ")
-
-        # This part checks if the user typed "exit". If they did, we print a message and stop the calculator.
-        if user_input.lower() == "exit":
-            print("Exiting calculator...")
-            break  # This "break" command tells the program to stop running the loop and exit.
-
         try:
-            # Now we split the input into three parts: the operation (add, subtract, etc.) and the two numbers.
-            operation, num1, num2 = user_input.split()
-            # We have to make sure the numbers are actually numbers, so we convert them to floats.
-            num1, num2 = float(num1), float(num2)
-        except ValueError:
-            # If the user doesn't type something correctly, like typing letters where numbers should be, we show an error.
-            print("Invalid input. Please follow the format: <operation> <num1> <num2>")
-            continue  # This "continue" means: try again by going back to the top of the loop.
+            # Prompt the user to enter an operation and two numbers
+            user_input: str = input(">> ").strip()
 
-        # Now we check what operation the user asked for and call the right function (addition, subtraction, etc.).
-        if operation == "add":
-            result = operations.addition(num1, num2)  # We call the addition function to add the two numbers.
-        elif operation == "subtract":
-            result = operations.subtraction(num1, num2)  # We call the subtraction function to subtract the two numbers.
-        elif operation == "multiply":
-            result = operations.multiplication(num1, num2)  # We call the multiplication function to multiply the two numbers.
-        elif operation == "divide":
+            # LBYL (Look Before You Leap)
+            # -----------------------------------
+            # Before attempting to process the input, we check if it's empty.
+            # This prevents unnecessary processing and potential errors.
+            if not user_input:
+                # Input is empty, so we skip processing and prompt again.
+                continue # pragma: no cover
+
+            # Handle special commands
+            command = user_input.lower()
+
+            # LBYL is used here to check if the user input matches any special commands.
+            if command == "help":
+                display_help()
+                continue
+            elif command == "history":
+                display_history(history)
+                continue
+            elif command == "exit":
+                print("Exiting calculator. Goodbye!\n")
+                sys.exit(0)  # Exit the program gracefully
+
+            # EAFP (Easier to Ask Forgiveness than Permission)
+            # -----------------------------------
+            # Instead of checking if the input is correctly formatted (which can be complex),
+            # we attempt to parse it and handle any exceptions that arise.
             try:
-                result = operations.division(num1, num2)  # We call the division function to divide the two numbers.
-            except ZeroDivisionError as e:
-                # This part handles the case where someone tries to divide by zero, which we can't do.
-                # The division function will throw an error if someone tries dividing by zero, and we catch that error here.
-                print(e)  # Show the error message.
-                continue  # Go back to the top of the loop and try again.
-        else:
-            # If the user types an operation we don't understand, we show them a message.
-            print(f"Unknown operation '{operation}'. Supported operations: add, subtract, multiply, divide.")
-            continue  # Go back to the top of the loop and try again.
+                # Attempt to split the user input into operation and operands
+                operation, num1_str, num2_str = user_input.split()
+                # Convert the operand strings to floats
+                num1: float = float(num1_str)
+                num2: float = float(num2_str)
+            except ValueError:
+                # If splitting or conversion fails, we catch the exception.
+                # This approach trusts the user input and handles exceptions if something goes wrong.
+                # This is characteristic of EAFP.
+                print("Invalid input. Please follow the format: <operation> <num1> <num2>")
+                print("Type 'help' for more information.\n")
+                continue  # Prompt the user again
 
-        # Finally, we print the result of the operation (for example, "Result: 8").
-        print(f"Result: {result}")
+            # Attempt to create a Calculation instance using the factory
+            try:
+                calculation = CalculationFactory.create_operation(operation, num1, num2)
+            except ValueError as ve:
+                # Handle unsupported operations
+                print(ve)
+                print("Type 'help' to see the list of supported operations.\n")
+                continue  # Prompt the user again
+
+            # Attempt to execute the calculation
+            try:
+                result = calculation.execute()
+            except ZeroDivisionError:
+                # Handle division by zero specifically
+                print("Cannot divide by zero.")
+                print("Please enter a non-zero divisor.\n")
+                continue  # Prompt the user again
+            except Exception as e:
+                # Handle any other unforeseen exceptions
+                print(f"An error occurred during calculation: {e}")
+                print("Please try again.\n")
+                continue  # Prompt the user again
+
+            # Prepare the result string for display
+            result_str: str = f"{calculation}"
+            print(f"Result: {result_str}\n")
+
+            # Append the calculation object to history
+            history.append(calculation)
+
+        except KeyboardInterrupt:
+            # EAFP example for handling unexpected interruption
+            # Instead of checking if the user pressed Ctrl+C before each input,
+            # we handle the KeyboardInterrupt exception.
+            print("\nKeyboard interrupt detected. Exiting calculator. Goodbye!")
+            sys.exit(0)
+        except EOFError:
+            # EAFP example for handling EOF (Ctrl+D)
+            # Similar to KeyboardInterrupt, we handle the EOFError exception.
+            print("\nEOF detected. Exiting calculator. Goodbye!")
+            sys.exit(0)
 
 
-# Explanation of __init__.py:
-# In Python, a file named "__init__.py" is really important. It tells Python that the folder it's in (in this case, "calculator") 
-# is a special kind of folder called a "package". Think of a package like a folder that contains related code, like a toolbox with
-# different tools inside.
-# 
-# Without the "__init__.py" file, Python won't know that the folder can be used to group code together. It’s like a flag that says,
-# "Hey Python, this folder can be used to import code!"
-# 
-# For example, if we put the "__init__.py" file in the "calculator" folder, we can import anything inside it by saying something like:
-# "from app.calculator import calculator". The "__init__.py" file can be empty, or it can have code in it, but its main job is just 
-# to make the folder a package.
+# If this script is run directly, start the calculator REPL
+if __name__ == "__main__":
+    calculator() # pragma: no cover
