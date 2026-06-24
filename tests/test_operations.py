@@ -1,10 +1,24 @@
 """These are the unit tests for the operations module. While it may not be necessary for me to write this description, we are practicing coding conventions - so I figured it would be a good habit to get in the practice of describing what each section of my project does. Here, we introduce parameterized tests - allowing for the same testing as with Assignment 2, but with less duplicate code."""
 
 import pytest
-from typing import Union # Looking at the template, seems like this is used for the type hinting mentioned in the modules
-from app.operations import operations
+from decimal import Decimal
+from typing import Any, Dict, Type
+ # Looking at the template, seems like this is used for the type hinting mentioned in the modules
 
-Number = Union[int, float] # This is a type hinting alias, allowing us to use 'Number' instead of writing 'Union[int, float]' every time we want to specify that a variable can be either an int or a float.
+from app.exceptions import OperationError
+from app.operations import OperationFactory
+from app.operations import(
+    Operation,
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+    Power,
+    Root,
+    OperationFactory
+)
+import operator
+
 
 """
 Hello Prof. Williams, Arash, or whoever may be reading this! Just wanted to say that I am enjoying the course and hope you are doing well. Here's a coding duck to brighten your day a bit!
@@ -40,245 +54,230 @@ Hello Prof. Williams, Arash, or whoever may be reading this! Just wanted to say 
 ⠀⠀⠀⠀⠀⠀⢠⣾⣿⣿⣿⣿⣏⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 """
 
-# ---------------------------
-# Unit tests for 'addition'
-# ---------------------------
+class TestOperation:
+    """Test base Operation class functionality."""
 
-@pytest.mark.parametrize("a, b, expected", [
-    (2, 4, 6),          # Test with two integers
-    (1.5, 2.5, 4.0),    # Test with two positive floats
-    (-1, -2, -3),       # Test with negative integers
-    (-1, 1, 0),        # Test with a negative and a positive integer
-    (-2.5, 4.5, 2.0),    # Test with a negative and a positive float
-    (0, 0, 0),          # Test with zeros
-    (1, -1, 0),         # Test with a positive and a negative integer
-    ], 
-    ids=[
-        "add_two_integers",
-        "add_two_positive_floats",
-        "add_two_negative_integers",
-        "add_negative_and_positive_integer",
-        "add_negative_and_positive_float",
-        "add_zeros",
-        "add_positive_and_negative_integer"
-    ]
-)
+    def test_str_representation(self):
+        """Test that string representation returns class name."""
+        class TestOp(Operation):
+            def _execute(self, a: Decimal, b: Decimal) -> Decimal:
+                return a + b
 
-def test_addition(a: Number, b: Number, expected: Number) -> None:
-    """
-    Test the addition method of the Operations class with various inputs.
+        assert str(TestOp()) == "TestOp"
+
+
+class BaseOperationTest:
+    """Base test class for all operations."""
+
+    operation_class: Type[Operation]
+    valid_test_cases: Dict[str, Dict[str, Any]]
+    invalid_test_cases: Dict[str, Dict[str, Any]]
+
+    def test_valid_operations(self):
+        """Test operation with valid inputs."""
+        operation = self.operation_class()
+        for name, case in self.valid_test_cases.items():
+            a = Decimal(str(case["a"]))
+            b = Decimal(str(case["b"]))
+            expected = Decimal(str(case["expected"]))
+            result = operation.execute(a, b)
+            assert result == expected, f"Failed case: {name}"
+
+    def test_invalid_operations(self):
+        """Test operation with invalid inputs raises appropriate errors."""
+        operation = self.operation_class()
+        for name, case in self.invalid_test_cases.items():
+            a = Decimal(str(case["a"]))
+            b = Decimal(str(case["b"]))
+            error = case.get("error", OperationError)
+            error_message = case.get("message", "")
+
+            with pytest.raises(error, match=error_message):
+                operation.execute(a, b)
+
+
+class TestAddition(BaseOperationTest):
+    """Test Addition operation."""
+
+    operation_class = Addition
+    valid_test_cases = {
+        "positive_numbers": {"a": "5", "b": "3", "expected": "8"},
+        "negative_numbers": {"a": "-5", "b": "-3", "expected": "-8"},
+        "mixed_signs": {"a": "-5", "b": "3", "expected": "-2"},
+        "zero_sum": {"a": "5", "b": "-5", "expected": "0"},
+        "decimals": {"a": "5.5", "b": "3.3", "expected": "8.8"},
+        "large_numbers": {
+            "a": "1e10",
+            "b": "1e10",
+            "expected": "20000000000"
+        },
+    }
+    invalid_test_cases = {}  # Addition has no invalid cases
+
+
+class TestSubtraction(BaseOperationTest):
+    """Test Subtraction operation."""
+
+    operation_class = Subtraction
+    valid_test_cases = {
+        "positive_numbers": {"a": "5", "b": "3", "expected": "2"},
+        "negative_numbers": {"a": "-5", "b": "-3", "expected": "-2"},
+        "mixed_signs": {"a": "-5", "b": "3", "expected": "-8"},
+        "zero_result": {"a": "5", "b": "5", "expected": "0"},
+        "decimals": {"a": "5.5", "b": "3.3", "expected": "2.2"},
+        "large_numbers": {
+            "a": "1e10",
+            "b": "1e9",
+            "expected": "9000000000"
+        },
+    }
+    invalid_test_cases = {}  # Subtraction has no invalid cases
+
+
+class TestMultiplication(BaseOperationTest):
+    """Test Multiplication operation."""
+
+    operation_class = Multiplication
+    valid_test_cases = {
+        "positive_numbers": {"a": "5", "b": "3", "expected": "15"},
+        "negative_numbers": {"a": "-5", "b": "-3", "expected": "15"},
+        "mixed_signs": {"a": "-5", "b": "3", "expected": "-15"},
+        "multiply_by_zero": {"a": "5", "b": "0", "expected": "0"},
+        "decimals": {"a": "5.5", "b": "3.3", "expected": "18.15"},
+        "large_numbers": {
+            "a": "1e5",
+            "b": "1e5",
+            "expected": "10000000000"
+        },
+    }
+    invalid_test_cases = {}  # Multiplication has no invalid cases
+
+
+class TestDivision(BaseOperationTest):
+    """Test Division operation."""
+
+    operation_class = Division
+    valid_test_cases = {
+        "positive_numbers": {"a": "6", "b": "2", "expected": "3"},
+        "negative_numbers": {"a": "-6", "b": "-2", "expected": "3"},
+        "mixed_signs": {"a": "-6", "b": "2", "expected": "-3"},
+        "decimals": {"a": "5.5", "b": "2", "expected": "2.75"},
+        "divide_zero": {"a": "0", "b": "5", "expected": "0"},
+    }
+    invalid_test_cases = {
+        "divide_by_zero": {
+            "a": "5",
+            "b": "0",
+            "error": OperationError,
+            "message": "Division by zero is not allowed"
+        },
+    }
+
+
+class TestPower(BaseOperationTest):
+    """Test Power operation."""
+
+    operation_class = Power
+    valid_test_cases = {
+        "positive_base_and_exponent": {"a": "2", "b": "3", "expected": "8"},
+        "zero_exponent": {"a": "5", "b": "0", "expected": "1"},
+        "one_exponent": {"a": "5", "b": "1", "expected": "5"},
+        "decimal_base": {"a": "2.5", "b": "2", "expected": "6.25"},
+        "zero_base": {"a": "0", "b": "5", "expected": "0"},
+    }
+    invalid_test_cases = {
+        "negative_exponent": {
+            "a": "2",
+            "b": "-3",
+            "error": OperationError,
+            "message": "Negative exponents not supported"
+        },
+    }
+
+
+class TestRoot(BaseOperationTest):
+    """Test Root operation."""
+
+    operation_class = Root
+    valid_test_cases = {
+        "square_root": {"a": "9", "b": "2", "expected": "3"},
+        "cube_root": {"a": "27", "b": "3", "expected": "3"},
+        "fourth_root": {"a": "16", "b": "4", "expected": "2"},
+        "decimal_root": {"a": "2.25", "b": "2", "expected": "1.5"},
+    }
+    invalid_test_cases = {
+        "negative_base": {
+            "a": "-9",
+            "b": "2",
+            "error": OperationError,
+            "message": "Cannot calculate root of negative number"
+        },
+        "zero_root": {
+            "a": "9",
+            "b": "0",
+            "error": OperationError,
+            "message": "Zero root is undefined"
+        },
+    }
+
+
+class TestOperationFactory:
+    """Test OperationFactory functionality."""
+
+    def test_create_valid_operations(self):
+        """Test creation of all valid operations."""
+        operation_map = {
+            'add': Addition,
+            'subtract': Subtraction,
+            'multiply': Multiplication,
+            'divide': Division,
+            'power': Power,
+            'root': Root,
+        }
+
+        for op_name, op_class in operation_map.items():
+            operation = OperationFactory.create_operation(op_name)
+            assert isinstance(operation, op_class)
+            # Test case-insensitive
+            operation = OperationFactory.create_operation(op_name.upper())
+            assert isinstance(operation, op_class)
+
+    def test_create_invalid_operation(self):
+        """Test creation of invalid operation raises error."""
+        with pytest.raises(ValueError, match="Unknown operation: invalid_op"):
+            OperationFactory.create_operation("invalid_op")
+
+    def test_register_valid_operation(self):
+        """Test registering a new valid operation."""
+        class NewOperation(Operation):
+            def _execute(self, a: Decimal, b: Decimal) -> Decimal:
+                return a + b
+
+        OperationFactory.register_operation("new_op", NewOperation)
+        operation = OperationFactory.create_operation("new_op")
+        assert isinstance(operation, NewOperation)
+
+    def test_register_invalid_operation(self):
+        """Test registering an invalid operation class raises error."""
+        class InvalidOperation:
+            pass
+
+        with pytest.raises(TypeError, match="Operation class must inherit"):
+            OperationFactory.register_operation("invalid", InvalidOperation)
+
+def test_operation_execute_invalid_operands():
+    operation = OperationFactory.create_operation('add')
+
+    with pytest.raises(OperationError, match="Invalid operand"):
+        operation.execute("invalid", "data")
+
+def test_division_by_zero_triggers_exception():
+    # Create the division operation
+    division_op = OperationFactory.create_operation('divide')
     
-        Parameters:
-            a (Number): The first number to add.
-            b (Number): The second number to add.
-            expected (Number): The expected result of the addition.
-                        
-        Returns:
-            None: This function does not return anything, it will raise an assertion error if the test fails.
-
-        Steps:
-            1. Call the addition method with the provided inputs.
-            2. Assert that the result matches the expected value. 
-        
-        Example:
-            Given a = 2, b = 4, and expected = 6, when the addition method is called, it should return 6. If it returns anything other than
-            6, the test will fail and an assertion error will be raised with a message indicating the expected and actual results.
-    """
-    # Call the addition method
-    result = operations.addition(a, b)
-
-    # Assert that the result matches the expected value
-    assert result == expected, f"Expected addition({a}, {b}) to be {expected} but got {result}"
-
-# ---------------------------
-# Unit tests for 'subtraction'
-# ---------------------------
-
-@pytest.mark.parametrize("a, b, expected", [
-    (5, 1, 4),          # Test with two integers
-    (5.5, 2.5, 3.0),    # Test with two floats
-    (-1, -2, 1),       # Test with negative integers
-    (-1, 1, -2),       # Test with a negative and a positive integer
-    (-2.5, 4.5, -7.0), # Test with a negative and a positive float
-    (0, 0, 0),         # Test with zeros
-    (1, -1, 2),        # Test with a positive and a negative integer
-    ],
-    ids=[
-        "subtract_two_integers",
-        "subtract_two_floats",
-        "subtract_two_negative_integers",
-        "subtract_negative_and_positive_integer",
-        "subtract_negative_and_positive_float",
-        "subtract_zeros",
-        "subtract_positive_and_negative_integer"
-    ]
-)
-def test_subtraction(a: Number, b: Number, expected: Number) -> None:
-    """
-    Test the subtraction method of the Operations class with various inputs.
+    # Call execute with divisor zero to trigger exception
+    with pytest.raises(OperationError) as excinfo:
+        division_op.execute(Decimal('1'), Decimal('0'))
     
-        Parameters:
-            a (Number): The first number to subtract from.
-            b (Number): The second number to subtract.
-            expected (Number): The expected result of the subtraction.
-                        
-        Returns:
-            None: This function does not return anything, it will raise an assertion error if the test fails.
-
-        Steps:
-            1. Call the subtraction method with the provided inputs.
-            2. Assert that the result matches the expected value. 
-        
-        Example:
-            Given a = 5, b = 3, and expected = 2, when the subtraction method is called, it should return 2. If it returns anything other than
-            2, the test will fail and an assertion error will be raised with a message indicating the expected and actual results.
-    """
-    # Call the subtraction method
-    result = operations.subtraction(a, b)
-
-    # Assert that the result matches the expected value
-    assert result == expected, f"Expected subtraction({a}, {b}) to be {expected} but got {result}"
-
-# ---------------------------
-# Unit tests for 'multiplication'
-# ---------------------------
-
-@pytest.mark.parametrize("a, b, expected", [
-    (3, 4, 12),         # Test with two integers
-    (2.5, 4.0, 10.0),   # Test with two floats
-    (-1, -2, 2),       # Test with negative integers
-    (-1, 1, -1),       # Test with a negative and a positive
-    (-2.5, 4.5, -11.25), # Test with a negative and a positive float
-    (0, 5, 0),         # Test with zero and a positive integer
-    (1, -1, -1),       # Test with a positive and a negative integer
-    ],
-    ids=[
-        "multiply_two_integers",
-        "multiply_two_floats",
-        "multiply_two_negative_integers",
-        "multiply_negative_and_positive",
-        "multiply_negative_and_positive_float",
-        "multiply_zero_and_positive_integer",
-        "multiply_positive_and_negative_integer"
-    ]
-)
-def test_multiplication(a: Number, b: Number, expected: Number) -> None:
-    """
-    Test the multiplication method of the Operations class with various inputs.
-    
-        Parameters:
-            a (Number): The first number to multiply.
-            b (Number): The second number to multiply.
-            expected (Number): The expected result of the multiplication.
-                        
-        Returns:
-            None: This function does not return anything, it will raise an assertion error if the test fails.
-
-        Steps:
-            1. Call the multiplication method with the provided inputs.
-            2. Assert that the result matches the expected value. 
-        
-        Example:
-            Given a = 3, b = 4, and expected = 12, when the multiplication method is called, it should return 12. If it returns anything other than
-            12, the test will fail and an assertion error will be raised with a message indicating the expected and actual results.
-    """
-    # Call the multiplication method
-    result = operations.multiplication(a, b)
-
-    # Assert that the result matches the expected value
-    assert result == expected, f"Expected multiplication({a}, {b}) to be {expected} but got {result}"
-
-# ---------------------------
-# Unit tests for 'division'
-# ---------------------------
-
-@pytest.mark.parametrize("a, b, expected", [
-    (10, 2, 5),         # Test with two integers
-    (5.0, 2.0, 2.5),    # Test
-    (-10, -2, 5),      # Test with negative integers
-    (-10, 2, -5),      # Test with a negative and a positive integer
-    (-10.0, 2.0, -5.0), # Test with a negative and a positive float
-    (0, 5, 0),         # Test with zero and a positive integer
-    (1, -1, -1),       # Test with a positive and a negative integer
-    ],
-    ids=[
-        "divide_two_integers",
-        "divide_two_floats",
-        "divide_two_negative_integers",
-        "divide_negative_and_positive_integer",
-        "divide_negative_and_positive_float",
-        "divide_zero_and_positive_integer",
-        "divide_positive_and_negative_integer"
-    ]
-)
-def test_division(a: Number, b: Number, expected: Number) -> None:
-    """
-    Test the division method of the Operations class with various inputs.
-    
-        Parameters:
-            a (Number): The numerator.
-            b (Number): The denominator.
-            expected (Number): The expected result of the division.
-                        
-        Returns:
-            None: This function does not return anything, it will raise an assertion error if the test fails.
-
-        Steps:
-            1. Call the division method with the provided inputs.
-            2. Assert that the result matches the expected value. 
-        
-        Example:
-            Given a = 10, b = 2, and expected = 5, when the division method is called, it should return 5. If it returns anything other than
-            5, the test will fail and an assertion error will be raised with a message indicating the expected and actual results.
-    """
-    # Call the division method
-    result = operations.division(a, b)
-
-    # Assert that the result matches the expected value
-    assert result == expected, f"Expected division({a}, {b}) to be {expected} but got {result}"
-
-# ---------------------------
-# Unit tests for dividing by zero
-# ---------------------------
-
-@pytest.mark.parametrize("a, b", [
-    (10, 0),        # Test with an integer numerator and zero denominator
-    (5.0, 0.0),     # Test with a float numerator and zero denominator
-    (-10, 0),       # Test with a negative integer numerator and zero denominator
-    (-10.0, 0.0),    # Test with a negative float numerator and zero denominator
-    (0, 0),         # Test with zero numerator and zero denominator
-    ],
-    ids=[
-        "divide_integer_by_zero",
-        "divide_float_by_zero",
-        "divide_negative_integer_by_zero",
-        "divide_negative_float_by_zero",
-        "divide_zero_by_zero"
-    ]
-)
-def test_division_by_zero(a: Number, b: Number) -> None:
-    """
-    Test the division method of the Operations class when dividing by zero.
-    
-        Parameters:
-            a (Number): The numerator.
-            b (Number): The denominator (which is zero in this case).
-                        
-        Returns:
-            None: This function does not return anything, it will raise an assertion error if the test fails.
-
-        Steps:
-            1. Call the division method with the provided inputs.
-            2. Assert that a ZeroDivisionError is raised when attempting to divide by zero. 
-        
-        Example:
-            Given a = 10 and b = 0, when the division method is called, it should raise a ValueError. If it does not raise this error, the test will fail and an assertion error will be raised with a message indicating that a ZeroDivisionError was expected but not raised.
-    """
-    # Assert that a ZeroDivisionError is raised when attempting to divide by zero
-    with pytest.raises(ZeroDivisionError, match="Cannot divide by zero") as exc_info:
-        operations.division(a, b)
-    
-    # Assert that the exception message is correct
-    assert "Cannot divide by zero" in str(exc_info.value), \
-        f"Expected ZeroDivisionError with message 'Cannot divide by zero' but got '{(exc_info.value)}'"  
-    
+    # Verify the exception message contains "Calculation failed:"
+    assert "Calculation failed:" in str(excinfo.value)
